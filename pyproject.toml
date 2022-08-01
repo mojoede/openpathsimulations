@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "openpathsimulations"
+version = "0.1.0"
+description = ""
+authors = ["Tobias Schmitt <tschmitt@iup.uni-heidelberg.de>"]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+openpathretrieval = { git = "https://gitlab.iup.uni-heidelberg.de/tschmitt/openpathretrieval.git" }
+plotly = "^5.8.0"
+numpy = "^1.22.4"
+xarray = ">=0.21.1, <1.0.0"
+
+[tool.poetry.dev-dependencies]
+matplotlib = "^3.5.1"
+pre-commit = "^2.19.0"
+flake8 = "^4.0.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
