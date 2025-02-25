@@ -14,14 +14,14 @@ from openpathretrieval.file_opener import FileOpener
 
 
 # %%
-def noise_free_spectrum():
+def noise_free_spectrum(resolution=0.6):
     # wavenumbers = np.arange(4710, 5150, 0.005)
     wavenumbers = np.arange(6100, 6450, 0.005)
     wavenumber_array = data_of_wavenumber(wavenumbers, wavenumbers)
     ils = ILSFactory.norton_beer_medium(
         wavenumber_step=0.005,
         width=10,
-        resolution=0.6,
+        resolution=resolution,
     )
     xsdb = xr.open_dataset(Path(
         r"C:\Daten\Hitran\forwardmodel\xsections\combined\\"
@@ -82,13 +82,13 @@ def retrieve_spectrum(simulated_measurement):
     return result
 
 
-def collect_statistic(number_of_runs, snr):
+def collect_statistic(number_of_runs, snr, resolution=0.6):
     run_number = []
     CO2_results = []
     H2O_results = []
     for n in range(number_of_runs):
-        spectrum = noise_free_spectrum()
-        spectrum = down_sample_spectrum(spectrum, 0.24)
+        spectrum = noise_free_spectrum(resolution=resolution)
+        spectrum = down_sample_spectrum(spectrum, resolution/2)
         spectrum = add_noise_to_spectrum(spectrum, snr, add_noise_window=True)
         result = retrieve_spectrum(spectrum)
         run_number.append(n)
@@ -148,7 +148,34 @@ print_statistics(snr200_downsampled.H2O)
 print_statistics(snr800_downsampled.H2O)
 print_statistics(snr800_1u6.H2O)
 # %%
-snr800_1u6 = collect_statistic(1000, 800)
+snr800_1u6_06 = collect_statistic(1000, 800, 0.6)
 # %%
-snr800_1u6.to_netcdf(Path("1u6_snr0800_downsampled_2.hdf5"))
+snr800_1u6_06.to_netcdf(Path("1u6_snr0800_res06.hdf5"))
+# %%
+snr800_1u6_03 = collect_statistic(1000, 800, 0.3)
+# %%
+snr800_1u6_03.to_netcdf(Path("1u6_snr0800_res03.hdf5"))
+# %%
+snr400_1u6_03 = collect_statistic(1000, 400, 0.3)
+# %%
+snr400_1u6_03.to_netcdf(Path("1u6_snr0400_res03.hdf5"))
+# %%
+snr1200_1u6_09 = collect_statistic(1000, 1200, 0.9)
+# %%
+snr1200_1u6_09.to_netcdf(Path("1u6_snr1200_res09.hdf5"))
+# %%
+print_statistics(snr800_1u6_06.CO2)
+# %%
+print_statistics(snr800_1u6_03.CO2)
+# %%
+print_statistics(snr400_1u6_03.CO2)
+# %%
+print_statistics(snr1200_1u6_09.CO2)
+
+# %%
+for i in range(10):
+    print_statistics(snr800_1u6_06.CO2[i*100:(i+1)*100])
+# %%
+snr800_1u6_06 = xr.open_dataset(Path("1u6_snr0800_res06.hdf5"))
+snr1200_1u6_09 = xr.open_dataset(Path("1u6_snr1200_res09.hdf5"))
 # %%

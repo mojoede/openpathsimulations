@@ -18,15 +18,15 @@ noise_window:
 
 retrwindows:
   window1:
-    nu_start: 4750
-    nu_stop: 5050
+    nu_start: 6170
+    nu_stop: 6380
     nu_step: 0.005
     boundary_offset: 20
     absorber: [CO2_1, H2O_1]
-    xsdb_path: C:\Daten\Hitran\forwardmodel\xsections\combined\4700-5300-CO2_all-H2O_all-HDO.hdf5
+    xsdb_path: C:\Daten\Hitran\forwardmodel\xsections\combined\5800-6600-CO2_626_628_636-CH4_211_311-H2O_161_162_181.hdf5
     ils:
       type: NBM  # supported are "NBM", "sinc", "DataArray", "delta"
-      resolution: 0.60  # resolution of ils (for theoretical ils only)
+      resolution: 0.30  # resolution of ils (for theoretical ils only)
       width: 10  # size of ils to each side in multiple of resolution (for theoretical ils only)
       ils_path:  # path to ils if type is "DataArray". Has to be netcdf4, xarray.DataArray.
     background:
