@@ -4,5 +4,5 @@
 */__pycache__/*
 *.hdf5
 output/
-conf/
+conf/*
 !conf/example_config.yaml

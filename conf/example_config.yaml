@@ -1,0 +1,58 @@
+output_path: .\
+environment_path: .\
+fit_pressure: False
+fit_temperature: False
+
+atmosphere:
+  temperature: 300.
+  pressure: 1000.
+
+statistics:
+  snr: 100.
+  number_of_runs: 4
+
+true_column:
+  CO2_626: 3.3e+21
+  CO2_636: 3.3e+21
+  CO2_628: 3.3e+21
+  H2O: 7.6e+21
+
+# Absorberdefinition, initial total columns, database-identifier
+absorber:
+  CO2_626_1:
+    id: CO2_626
+    total_column: 3.5e+21
+  CO2_636_1:
+    id: CO2_636
+    total_column: 3.5e+21
+  CO2_628_1:
+    id: CO2_628
+    total_column: 3.5e+21
+  H2O_1:
+    id: H2O
+    total_column: 8.0e+22
+
+noise_window:
+  nu_start: 3000
+  nu_stop: 4000
+
+retrwindows:
+  window1:
+    nu_start: 4800
+    nu_stop: 4950
+    nu_step: 3.3356e-3
+    boundary_offset: 20
+    absorber: [CO2_626_1, CO2_636_1, CO2_628_1, H2O_1]
+    xsdb_path: /home/msindram/Promotion/Software/openpath/xsections/xsdb/4700-5300-CO2_626-CO2_628-CO2_636-H2O_all-highres.hdf5
+    ils:
+      type: delta  # supported are "NBM", "sinc", "DataArray", "delta"
+      resolution: 0.5  # resolution of ils (for theoretical ils only)
+      modulation_efficiency: 0.96369
+      phase_error: 0.00417
+      max_half_angle: 2.39e-3
+      width: 10  # size of ils to each side in multiple of resolution (for theoretical ils only)
+      ils_path:  # path to ils if type is "DataArray". Has to be netcdf4, xarray.DataArray.
+    background:
+      BgType: PolynomBg  # supported are "PolynomBg"
+      num_coeff: 3  # Number of background coefficients
+    num_stretch_coeff: 1  # Number of stretch coefficients to be fitted
