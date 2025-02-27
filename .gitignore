@@ -1,4 +1,8 @@
 *.code-workspace
 .vscode
+.venv
 */__pycache__/*
 *.hdf5
+output/
+conf/
+!conf/example_config.yaml
