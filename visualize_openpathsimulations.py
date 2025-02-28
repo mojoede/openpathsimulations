@@ -62,7 +62,7 @@ delta_13C, delta_13C_err = calc_delta(
 # %% Plot Spectrum fit and residue
 fig1, ax1 = plt.subplots()
 simspec.spectrum_with_noise.plot(ax=ax1, label="Spectrum + noise")
-simspec.noise_free_spectrum.plot(ax=ax1, label="Forward modeld spectrum")
+simspec.noise_free_spectrum.plot(ax=ax1, label="Forward modeled spectrum")
 ax1.set_xlabel("wavenumber $\\left[\\mathrm{cm}^{-1}\\right]$")
 ax1.set_ylabel("transmission")
 ax1.set_title("Simulated spectrum")
