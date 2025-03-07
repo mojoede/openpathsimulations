@@ -4,20 +4,22 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 
+from openpathsimulation import read_background_spectrum
+
 %matplotlib widget
 # %% Enter and load data
 true_columns = {
-    "CO2_626_1": 3.3e+21,
-    "CO2_636_1": 3.3e+21,
-    "CO2_628_1": 3.3e+21,
-    "H2O_1": 7.6e+21,
+    "CO2_626_1": 4.684214813874019e+21,
+    "CO2_636_1": 4.1307671963965755e+21,
+    "CO2_628_1": 4.99823947679575e+21,
+    "H2O_1": 6.908656067479201e+20,
 }
 
 R_CO2_636_VPDB = 0.0111802
 hitran_12C_abundance = 0.984204
 hitran_13C_abundance = 0.011057
 
-data_dir = Path("./output/250227_4800-4950_SNR100_run100")
+data_dir = Path("./output/250307_4750-4939_SNR266_run1_skewed-noise")
 simspec = xr.load_dataset(data_dir / Path("simspec.nc"))
 results = xr.load_dataset(data_dir / Path("statistics.nc"))
 retr_result = xr.load_dataset(data_dir / Path("example_retr_result.nc"))
@@ -59,9 +61,15 @@ delta_13C, delta_13C_err = calc_delta(
     hitran_13C_abundance,
 )
 
+# %% Load measured reference spectrum
+refspec_dir = Path("/home/msindram/Data_PhD/DCS/20250304/Spectral_trans.mat")
+refspec = read_background_spectrum(refspec_dir, ".mat", "Spectral_trans")
+
 # %% Plot Spectrum fit and residue
 fig1, ax1 = plt.subplots()
 simspec.spectrum_with_noise.plot(ax=ax1, label="Spectrum + noise")
+refspec_norm = refspec / 0.72
+refspec_norm.plot(ax=ax1, label="Measured spectrum")
 simspec.noise_free_spectrum.plot(ax=ax1, label="Forward modeled spectrum")
 ax1.set_xlabel("wavenumber $\\left[\\mathrm{cm}^{-1}\\right]$")
 ax1.set_ylabel("transmission")

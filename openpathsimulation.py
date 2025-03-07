@@ -2,6 +2,7 @@ from pathlib import Path
 import argparse
 import os
 import numpy as np
+import scipy
 import xarray as xr
 import yaml
 from tqdm import tqdm
@@ -41,6 +42,12 @@ def main(
     wn_start = config["retrwindows"]["window1"]["nu_start"]
     wn_stop = config["retrwindows"]["window1"]["nu_stop"]
     wn_step = config["retrwindows"]["window1"]["nu_step"]
+    background_file = Path(config.get("background_spectrum", {})
+                           .get("background_file", None))
+    background_type = (config.get("background_spectrum", {})
+                       .get("background_type", None))
+    background_key = (config.get("background_spectrum", {})
+                      .get("background_key", None))
 
     xsdb_path = Path(config["retrwindows"]["window1"]["xsdb_path"])
 
@@ -51,16 +58,28 @@ def main(
     pressure = config["atmosphere"]["pressure"]
 
     snr = config["statistics"]["snr"]
+    noise_type = config["statistics"].get("noise_type", "normal")
     number_of_runs = config["statistics"]["number_of_runs"]
 
     true_columns = config["true_column"]
 
     # Generate additional input variables
-    simulation_grid = np.arange(wn_start-50, wn_stop+50, wn_step)
+    if background_file is not None and background_type is not None:
+        background_spectrum = read_background_spectrum(
+            background_file,
+            background_type,
+            data_key=background_key,
+        )
+        simulation_grid = background_spectrum.coords["wavenumber"].values
+    else:
+        simulation_grid = np.arange(wn_start-50, wn_stop+50, wn_step)
+        background_spectrum = data_of_wavenumber(
+            np.ones(len(simulation_grid)),
+            simulation_grid,
+        )
     
     # Generate forward modeled spectrum
-
-    noise_free_spectrum = model_noise_free_spectrum(
+    transmission_spectrum = model_transmission_spectrum(
         simulation_grid,
         xsdb_path,
         ils_model,
@@ -69,6 +88,10 @@ def main(
         pressure,
         resolution=resolution,
     )
+    noise_free_spectrum = transmission_spectrum * background_spectrum
+
+    signal = background_spectrum.max().item()
+    print(f"Signal for noise calculation: {signal:.3f}.")
 
     gas_results = {key: [] for key in config["absorber"].keys()}
     gas_results_err = {f"{key}_err": [] for key in config["absorber"].keys()}
@@ -78,6 +101,8 @@ def main(
         spectrum = add_noise_to_spectrum(
             noise_free_spectrum,
             snr,
+            signal,
+            noise_type=noise_type,
             add_noise_window=True)
         retr_result = retrieve_spectrum(
             config,
@@ -127,9 +152,47 @@ def main(
         retr_result.to_netcdf(retr_result_dir)
     else:
         return simspec, results, retr_result
-    
 
-def model_noise_free_spectrum(
+
+def read_background_spectrum(
+    file_dir: Path,
+    file_type: str,
+    data_key: str = None,
+) -> xr.DataArray:
+    """Read a background spectrum from a file.
+
+        Parameters
+        ----------
+        file_dir : Path
+            Path to the background spectrum file.
+        file_type : str
+            Type of the file. Currently supported is '.mat'.
+        data_key : str, optional
+            Key of the data to be read from the file, by default None.
+    
+        Returns
+        -------
+        xr.DataArray
+            A background spectrum.
+
+        """
+    if file_type == ".mat":
+        assert data_key is not None, "Data key must be provided for .mat files."
+
+        background_dict = scipy.io.loadmat(file_dir)
+
+        wavenumber = background_dict[data_key][:, 0]
+        background = background_dict[data_key][:, 1]
+        print(f'Using {wavenumber} as wavenumber coordinate.')
+        print(f'Using {background} as background spectrum.')
+        
+        background_spectrum =  data_of_wavenumber(background, wavenumber)
+    else:
+        raise ValueError("File type not supported.")
+    return background_spectrum
+
+
+def model_transmission_spectrum(
     wn_grid: np.ndarray,
     xsdb_path: Path,
     ils_model: str,
@@ -179,8 +242,8 @@ def model_noise_free_spectrum(
         raise ValueError("ILS model must be 'NBM' or 'Delta'")  
      
     xsdb = xr.open_dataset(xsdb_path, engine="h5netcdf")
-    bg_type = PolynomBg
 
+    bg_type = PolynomBg
     fm = OpenPathFmShell(
         wavenumber_array=wavenumber_array,
         ils=ils,
@@ -203,16 +266,22 @@ def model_noise_free_spectrum(
 def add_noise_to_spectrum(
     spectrum : xr.DataArray,
     snr : float,
+    signal : float,
+    noise_type : str = "normal",
     add_noise_window : bool = False,
 ) -> xr.DataArray:
-    """Add gaussian noise to a spectrum.
+    """Add gaussian noise to a spectrum. The signal is defined as the maximum of the background spectrum. The noise is defined as the standard deviation of white noise.
 
         Parameters
         ----------
-        spectrum : np.ndarray
+        spectrum : xr.DataArray
             Simulated noise free spectrum.
         snr : float
             Signal to noise ratio.
+        signal : float
+            Signal for noise calculation.
+        noise_type : str, optional
+            Type of noise to be added. Currently 'normal' and 'complex_absolute' is supported, by default 'normal'.
         add_noise_window : bool, optional
             Add a noise window from 3000cm^-1 to 4000cm^-1 which the retrieval
             might require to work, by default False.
@@ -223,13 +292,43 @@ def add_noise_to_spectrum(
             A spectrum with added gaussian noise.
 
         """
-    noise = np.random.normal(0, 1/snr, size=len(spectrum))
-    spectrum = spectrum + noise
+    if noise_type == "normal":
+        noise = np.random.normal(0, signal/snr, size=len(spectrum))
+        spectrum = spectrum + noise
+    elif noise_type == "complex_absolute":
+        real_noise = np.random.normal(0, signal/snr, size=len(spectrum))
+        imag_noise = np.random.normal(0, signal/snr, size=len(spectrum))
+        noise = real_noise + 1j * imag_noise
+        complex_spectrum = (spectrum + spectrum * 1j) / np.sqrt(2)
+        spectrum = np.abs(complex_spectrum + noise)
+    else:
+        raise ValueError("Noise type not supported.")
+
     if add_noise_window:
         wn_spacing = spectrum.wavenumber[1] - spectrum.wavenumber[0]
         noise_window = np.arange(3000, 4000, wn_spacing)
-        noise = np.random.normal(0, 1/snr, size=len(noise_window))
-        noise_window_array = xr.DataArray(data=noise, coords={"wavenumber": noise_window})
+        if noise_type == "normal":
+            noise = np.random.normal(
+                0,
+                signal/snr,
+                size=len(noise_window),
+            )
+        elif noise_type == "complex_absolute":
+            real_noise = np.random.normal(
+                0,
+                signal/snr,
+                size=len(noise_window),
+            )
+            imag_noise = np.random.normal(
+                0,
+                signal/snr,
+                size=len(noise_window),
+            )
+            noise = np.abs(real_noise + 1j * imag_noise)
+        else:
+            raise ValueError("Noise type not supported.")
+        
+        noise_window_array = data_of_wavenumber(noise, noise_window)
         spectrum = xr.concat([spectrum, noise_window_array], "wavenumber")
     return spectrum
 
