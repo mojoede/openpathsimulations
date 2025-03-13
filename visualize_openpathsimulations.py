@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from openpathsimulation import read_background_spectrum
 
 %matplotlib widget
+
 # %% Enter and load data
 true_columns = {
     "CO2_626_1": 4.684214813874019e+21,
@@ -19,7 +20,8 @@ R_CO2_636_VPDB = 0.0111802
 hitran_12C_abundance = 0.984204
 hitran_13C_abundance = 0.011057
 
-data_dir = Path("./output/250307_4750-4939_SNR266_run1_skewed-noise")
+# data_dir = Path("./output/250307_4750-4939_SNR266_run1_skewed-noise")
+data_dir = Path("./output/250312_4750-4939_SNR266_run1_resolution/resolution_4.224e-1")
 simspec = xr.load_dataset(data_dir / Path("simspec.nc"))
 results = xr.load_dataset(data_dir / Path("statistics.nc"))
 retr_result = xr.load_dataset(data_dir / Path("example_retr_result.nc"))
