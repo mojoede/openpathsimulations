@@ -42,8 +42,13 @@ def main(
     wn_start = config["retrwindows"]["window1"]["nu_start"]
     wn_stop = config["retrwindows"]["window1"]["nu_stop"]
     wn_step = config["retrwindows"]["window1"]["nu_step"]
-    background_file = Path(config.get("background_spectrum", {})
+    background_file = (config.get("background_spectrum", {})
                            .get("background_file", None))
+    if background_file is not None:
+        background_file = Path(background_file)
+    else:
+        print("No background file provided. Simulating a transmission spectrum "
+        "instead.")
     background_type = (config.get("background_spectrum", {})
                        .get("background_type", None))
     background_key = (config.get("background_spectrum", {})
